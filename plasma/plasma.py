@@ -8,7 +8,8 @@ import plotly.express as px
 
 def fluent():
     setattr(go.Figure, "fix_marker_text", fix_marker_text)
-    setattr(go.Figure, "continuous_lines", continuous_lines)
+    setattr(go.Figure, "continuous_color", continuous_color)
+    print("fix_marker_text and continuous_color are now available on go.Figure")
 
 
 def fix_marker_text(
@@ -80,7 +81,10 @@ def overlay_yoy(df: pd.DataFrame, y: str) -> go.Figure:
 
     return (
         px.line(
-            df.assign(_chart_date=lambda df: df.index.strftime("2020-%m-%d")),
+            df.assign(
+                _chart_date=lambda df: df.index.strftime("2020-%m-%d"),
+                year=lambda df: df.index.year,
+            ),
             x="_chart_date",
             y=y,
             color="year",
@@ -90,7 +94,7 @@ def overlay_yoy(df: pd.DataFrame, y: str) -> go.Figure:
     )
 
 
-def continuous_lines(fig, colorscale: str = "Blues"):
+def continuous_color(fig, colorscale: str = "Blues"):
     n_traces = len(fig.data)
     colors = px.colors.sample_colorscale(colorscale, n_traces)
     for index, color in enumerate(colors):
