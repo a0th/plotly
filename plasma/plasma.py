@@ -9,7 +9,10 @@ import plotly.express as px
 def fluent():
     setattr(go.Figure, "fix_marker_text", fix_marker_text)
     setattr(go.Figure, "continuous_color", continuous_color)
-    print("fix_marker_text and continuous_color are now available on go.Figure")
+    setattr(go.Figure, "fix_facet_yaxes", fix_facet_yaxes)
+    print(
+        "fix_marker_text, continuous_color and fix_facet_yaxes are now available on go.Figure"
+    )
 
 
 def fix_marker_text(
@@ -100,3 +103,11 @@ def continuous_color(fig, colorscale: str = "Blues"):
     for index, color in enumerate(colors):
         fig.data[index]["line"]["color"] = color
     return fig
+
+
+def fix_facet_yaxes(fig, font_size=12):
+    return fig.update_yaxes(matches=None).for_each_annotation(
+        lambda annotation: annotation.update(
+            text=annotation.text.split("=")[1], font_size=font_size
+        )
+    )
