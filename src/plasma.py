@@ -111,3 +111,12 @@ def fix_facet_yaxes(fig, font_size=12):
             text=annotation.text.split("=")[1], font_size=font_size
         )
     )
+
+
+def multi_color_single_line(df, y, color):
+    possible_colors = df[color].unique()
+    possible_arrays = []
+    for c in possible_colors:
+        treated_array = df.where(df[color] == c, np.nan)[y].to_frame(c)
+        possible_arrays.append(treated_array)
+    return px.line(pd.concat(possible_arrays))
