@@ -5,96 +5,38 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-
-def fluent():
-    setattr(go.Figure, "fix_marker_text", fix_marker_text)
-    setattr(go.Figure, "continuous_color", continuous_color)
-    setattr(go.Figure, "fix_facet_yaxes", fix_facet_yaxes)
-    print(
-        "fix_marker_text, continuous_color and fix_facet_yaxes are now available on go.Figure"
-    )
+from copy import deepcopy
 
 
-def fix_marker_text(
-    fig: go.Figure,
-    marker_format: str = None,
-    tick_format: str = None,
-    panel_font_size: int = 12,
-) -> go.Figure:
-    if marker_format is None:
-        marker_format = "{:.1f}"
-    if tick_format is None:
-        tick_format = "{:.1f}"
-    marker_format = marker_format.replace("{:", "%{text:")
-
-    return fig.update_traces(
-        texttemplate=marker_format,
-        textposition="top center",
-        textfont=go.scatter.Textfont(size=panel_font_size),
-    ).update_yaxes(tickformat=tick_format[2:-1])
-
-
-def _is_between_zero_and_one(x: np.ndarray) -> bool:
-    return (x >= 0).all() and (x <= 1).all()
-
-
-def dual_axis_line(
-    df,
-    left_axis: str | list[str],
-    right_axis: str | list[str],
-    left_axis_title: str = None,
-    right_axis_title: str = None,
-) -> go.Figure:
-    if isinstance(left_axis, str):
-        left_axis = [left_axis]
-    if isinstance(right_axis, str):
-        right_axis = [right_axis]
-
-    assert len(set(left_axis) - set(df.columns)) == 0
-    assert len(set(right_axis) - set(df.columns)) == 0
-    if left_axis_title is None:
-        left_axis_title = _secondary_axis_title(left_axis)
-    if right_axis_title is None:
-        right_axis_title = _secondary_axis_title(right_axis)
-
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    for c in left_axis:
-        fig = fig.add_trace(go.Scatter(x=df.index, y=df[c], name=c), secondary_y=False)
-    for c in right_axis:
-        fig = fig.add_trace(go.Scatter(x=df.index, y=df[c], name=c), secondary_y=True)
-
+def dual(f):
+    first_chart = f.data[0]
+    second_chart = f.data[1]
     return (
-        fig.update_yaxes(title_text=left_axis_title, secondary_y=False)
-        .update_yaxes(
-            title_text=right_axis_title,
+        make_subplots(specs=[[{"secondary_y": True}]])
+        .add_trace(
+            go.Scatter(x=first_chart.x, y=first_chart.y, name=first_chart.name),
+            secondary_y=False,
+        )
+        .add_trace(
+            go.Scatter(x=second_chart.x, y=second_chart.y, name=second_chart.name),
             secondary_y=True,
+        )
+        .update_yaxes(
+            title_text=second_chart.name,
+            secondary_y=True,
+        )
+        .update_yaxes(
+            title_text=first_chart.name,
+            secondary_y=False,
         )
         .update_layout(yaxis2=dict(showgrid=False, zeroline=False))
     )
 
 
-def _secondary_axis_title(axis: str | list[str]) -> str:
-    if isinstance(axis, str):
-        return axis
-    else:
-        return "/".join(axis)
-
-
-def overlay_yoy(df: pd.DataFrame, y: str) -> go.Figure:
-
-    return (
-        px.line(
-            df.assign(
-                _chart_date=lambda df: df.index.strftime("2020-%m-%d"),
-                year=lambda df: df.index.year,
-            ),
-            x="_chart_date",
-            y=y,
-            color="year",
-        )
-        .update_xaxes(tickformat="%b %d")
-        .update_xaxes(title=df.index.name)
-    )
+def yoy(fig):
+    fig.data[1].x = [z.replace(year=2020) for z in fig.data[1].x]
+    fig.data[2].x = [z.replace(year=2020) for z in fig.data[2].x]
+    return fig.update_xaxes(tickformat="%b %d")
 
 
 def continuous_color(fig, colorscale: str = "Blues"):
@@ -105,18 +47,41 @@ def continuous_color(fig, colorscale: str = "Blues"):
     return fig
 
 
-def fix_facet_yaxes(fig, font_size=12):
-    return fig.update_yaxes(matches=None).for_each_annotation(
+def fix_facet_labels(fig, **kwargs):
+    return fig.for_each_annotation(
         lambda annotation: annotation.update(
-            text=annotation.text.split("=")[1], font_size=font_size
+            text=annotation.text.split("=")[1], **kwargs
         )
     )
 
 
-def multi_color_single_line(df, y, color):
-    possible_colors = df[color].unique()
-    possible_arrays = []
-    for c in possible_colors:
-        treated_array = df.where(df[color] == c, np.nan)[y].to_frame(c)
-        possible_arrays.append(treated_array)
-    return px.line(pd.concat(possible_arrays))
+def single_line(fig):
+    _fig = deepcopy(fig)
+    first_x = fig.data[0].x.tolist()
+    first_y = fig.data[0].y.tolist()
+    second_x = fig.data[1].x.tolist()
+    second_y = fig.data[1].y.tolist()
+    new_x = sorted(first_x + second_x)
+    left_y = []
+
+    right_y = []
+    for x in new_x:
+        if x in first_x:
+            left_y.append(first_y[first_x.index(x)])
+            right_y.append(None)
+        else:
+            left_y.append(None)
+            right_y.append(second_y[second_x.index(x)])
+
+    _fig.data[0].x = new_x
+    _fig.data[0].y = left_y
+    _fig.data[1].x = new_x
+    _fig.data[1].y = right_y
+    return _fig
+
+
+setattr(go.Figure, "yoy", yoy)
+setattr(go.Figure, "single_line", single_line)
+setattr(go.Figure, "continuous_color", continuous_color)
+setattr(go.Figure, "fix_facet_labels", fix_facet_labels)
+setattr(go.Figure, "dual", dual)
