@@ -1,23 +1,26 @@
----
-title: Plotly Patcher
-toc-title: Table of contents
----
+# Plotly Plasma
 
-Plotly Patcher is an opinionated thin wrapper that patches the Figure
-object from [Plotly](https://github.com/plotly/plotly.py) to add some
-functionatilies. These implement or fix some use cases commonly
-encountered when using the library:
+Plotly Plasma is a small opinionated enhancement for the [Plotly for
+Python](https://plotly.com/python/) library. It patches the Plotly
+Figure object, adding new methods to handle somewhat frequent use cases
+that would normally take some boilerplate code to solve.
 
-- [Multiple y-axes](#multiple-y-axes)
-- [Year-over-year comparison](#year-over-year-comparison)
-- [Multiple colors in a single line](#multiple-colors-in-a-single-line)
-- [Multiple lines with continuous colormap](#multiple-lines-with-continuous-colormap)
-- [Facets](#facets)
+Simply `import plasma`, and you are good to go!
+
+-   [Multiple y-axes](#Multiple-y-axes)
+-   [Year over year comparison](#Year-over-year-comparison)
+-   [Multiple colors in a single
+    line](#Multiple-colors-in-a-single-line)
+-   [Multiple lines with continuous
+    colormap](#Multiple-lines-with-continuous-colormap)
+-   [Facets](#Facets)
+
+
 
 # Multiple y-axes
 
 When the values of the metrics are in very different scales, Plotly
-doesnt have an easy way to produce dual axes.
+doesn't have a quick way to produce dual axes.
 
 The default function will use the largest axis, and small variances will
 be barely noticeable.
@@ -26,17 +29,17 @@ be barely noticeable.
 px.line(data[["sinoid_0", "sinoid_9"]])
 ```
 
-![](plasma_files/figure-markdown/cell-3-output-1.svg)
+![](plasma_files/figure-markdown/cell-4-output-1.svg)
 
-You can easily do that with `.dual`, which will make the first column
-the left axis and the second column the right axis.
+Plasma will let you easily do that with `.dual`, which will make the
+first column the left axis and the second column the right axis.
 
 ``` {.python .cell-code}
 fig = px.line(data[["sinoid_0", "sinoid_9"]]).dual()
 fig
 ```
 
-![](plasma_files/figure-markdown/cell-4-output-1.svg)
+![](plasma_files/figure-markdown/cell-5-output-1.svg)
 
 # Year-over-year comparison
 
@@ -48,15 +51,15 @@ fig = px.line(data, y="sinoid_0", color=data.index.year)
 fig
 ```
 
-![](plasma_files/figure-markdown/cell-5-output-1.svg)
+![](plasma_files/figure-markdown/cell-6-output-1.svg)
 
-You can use `.yoy` to do that, as long as the index is a datetime.
+You can use `.yoy` to do that, as long as the x-axis is a datetime.
 
 ``` {.python .cell-code}
 fig.yoy()
 ```
 
-![](plasma_files/figure-markdown/cell-6-output-1.svg)
+![](plasma_files/figure-markdown/cell-7-output-1.svg)
 
 # Multiple colors in a single line
 
@@ -65,16 +68,23 @@ use one line for every color value. Sometimes, we want a single line to
 have multiple colors, for example, to highlight a specific period.
 
 ``` {.python .cell-code}
-single_line_example = data.assign(is_january=lambda df: df.index.month == 1)
+def add_month_condition(df):
+    s = np.select(
+        [
+            data.index.month == 1,
+            data.index.month == 6,
+        ],
+        ["january", "june"],
+        default="rest of year",
+    )
+    return df.assign(month_condition=s)
+
 
 fig = px.line(
-    single_line_example,
+    data.pipe(add_month_condition),
     y="sinoid_0",
-    color="is_january",
+    color="month_condition",
 )
-```
-
-``` {.python .cell-code}
 fig
 ```
 
@@ -94,7 +104,12 @@ Still on the color topic, Plotly will use a discrete colormap by
 default, which is not always the best option.
 
 ``` {.python .cell-code}
-fig = px.line(tall_format, x="day", y="value", color="senoid_average")
+fig = px.line(
+    tall_format,
+    x="day",
+    y="value",
+    color="senoid_average",
+)
 fig
 ```
 
@@ -105,7 +120,7 @@ You can use `.continuous_color` to fix that. You can also pass a
 [Plotly colormaps](https://plotly.com/python/builtin-colorscales/).
 
 ``` {.python .cell-code}
-fig.continuous_color(colorscale="Tropic")
+fig.continuous_color('Tropic')
 ```
 
 ![](plasma_files/figure-markdown/cell-13-output-1.svg)
