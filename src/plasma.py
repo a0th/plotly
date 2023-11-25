@@ -48,6 +48,7 @@ def continuous_color(fig, colorscale: str = "Blues"):
 
 
 def fix_facet_labels(fig, **kwargs):
+    fig = deepcopy(fig)
     return fig.for_each_annotation(
         lambda annotation: annotation.update(
             text=annotation.text.split("=")[1], **kwargs
