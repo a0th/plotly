@@ -35,8 +35,7 @@ Plasma will let you easily do that with `.dual`, which will make the
 first column the left axis and the second column the right axis.
 
 ``` {.python .cell-code}
-fig = px.line(data[["sinoid_0", "sinoid_9"]]).dual()
-fig
+px.line(data[["sinoid_0", "sinoid_9"]]).dual()
 ```
 
 ![](plasma_files/figure-markdown/cell-5-output-1.svg)
@@ -48,7 +47,6 @@ different years.
 
 ``` {.python .cell-code}
 fig = px.line(data, y="sinoid_0", color=data.index.year)
-fig
 ```
 
 ![](plasma_files/figure-markdown/cell-6-output-1.svg)
