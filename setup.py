@@ -2,8 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="plotly-plasma",
-    version="0.2",
-    package_dir={"": "src"},
+    version="0.2.1",
     packages=find_packages(),
     description="A small opinionated enhancement for Plotly",
     author="Nilo Araujo",

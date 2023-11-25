@@ -2,7 +2,7 @@ from collections import namedtuple
 from copy import deepcopy
 
 import plotly.graph_objects as go
-from colormap import get_color
+from plasma.colormap import get_color
 from plotly.subplots import make_subplots
 
 
@@ -98,10 +98,3 @@ def single_line(fig):
         trace.y = new_y_arrays[trace_id]
 
     return fig
-
-
-setattr(go.Figure, "yoy", yoy)
-setattr(go.Figure, "single_line", single_line)
-setattr(go.Figure, "fix_facet_labels", fix_facet_labels)
-setattr(go.Figure, "dual", dual)
-setattr(go.Figure, "continuous_color", continuous_color)
