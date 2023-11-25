@@ -1,16 +1,18 @@
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import numpy as np
-
-import pandas as pd
-import plotly.express as px
-
+from collections import namedtuple
 from copy import deepcopy
 
+import plotly.graph_objects as go
+from colormap import get_color
+from plotly.subplots import make_subplots
 
-def dual(f):
-    first_chart = f.data[0]
-    second_chart = f.data[1]
+
+def dual(fig: go.Figure) -> go.Figure:
+    """Make a dual y-axis plot from a plotly figure with two traces."""
+    first_chart = fig.data[0]
+    try:
+        second_chart = fig.data[1]
+    except IndexError as e:
+        raise ValueError("Figure must have at least two traces to use dual()") from e
     return (
         make_subplots(specs=[[{"secondary_y": True}]])
         .add_trace(
@@ -29,21 +31,38 @@ def dual(f):
             title_text=first_chart.name,
             secondary_y=False,
         )
-        .update_layout(yaxis2=dict(showgrid=False, zeroline=False))
+        .update_layout(yaxis2={"showgrid": False, "zeroline": False})
     )
 
 
-def yoy(fig):
-    fig.data[1].x = [z.replace(year=2020) for z in fig.data[1].x]
-    fig.data[2].x = [z.replace(year=2020) for z in fig.data[2].x]
+def yoy(fig: go.Figure) -> go.Figure:
+    """Make a year-over-year plot."""
+    fig = deepcopy(fig)
+    for trace in fig.data:
+        trace.x = [date_index.replace(year=2020) for date_index in trace.x]
     return fig.update_xaxes(tickformat="%b %d")
 
 
-def continuous_color(fig, colorscale: str = "Blues"):
-    n_traces = len(fig.data)
-    colors = px.colors.sample_colorscale(colorscale, n_traces)
-    for index, color in enumerate(colors):
-        fig.data[index]["line"]["color"] = color
+def continuous_color(fig, colorscale: str = "Plotly"):
+    color_name = fig.layout.legend.title.text
+    color_values = []
+    for data in fig.data:
+        for hover_window_line_to_parse in data.hovertemplate.split("<br>"):
+            name, value = hover_window_line_to_parse.split("=")
+            if name == color_name:
+                color_values.append(float(value))
+    min_value = min(color_values)
+    max_value = max(color_values)
+    if len(color_values) == 1:
+        normalized_color_values = [0.5]
+    else:
+        normalized_color_values = [
+            (x - min_value) / (max_value - min_value) for x in color_values
+        ]
+    fig = deepcopy(fig)
+    colors = [get_color(colorscale, x) for x in normalized_color_values]
+    for data, color in zip(fig.data, colors):
+        data["line"]["color"] = color
     return fig
 
 
@@ -57,32 +76,32 @@ def fix_facet_labels(fig, **kwargs):
 
 
 def single_line(fig):
-    _fig = deepcopy(fig)
-    first_x = fig.data[0].x.tolist()
-    first_y = fig.data[0].y.tolist()
-    second_x = fig.data[1].x.tolist()
-    second_y = fig.data[1].y.tolist()
-    new_x = sorted(first_x + second_x)
-    left_y = []
+    fig = deepcopy(fig)
+    ChartData = namedtuple("ChartData", ["x", "y", "trace_id"])
+    n_traces = len(fig.data)
+    all_tuples: ChartData = []
+    for trace_id, trace in enumerate(fig.data):
+        for x, y in zip(trace.x, trace.y):
+            all_tuples.append(ChartData(x, y, trace_id))
+    all_tuples.sort(key=lambda tup: tup.x)
+    new_x_array = [x for x, _, _ in all_tuples]
+    new_y_arrays = [[] for _ in range(n_traces)]
+    for tup in all_tuples:
+        for current_trace_id in range(n_traces):
+            if tup.trace_id == current_trace_id:
+                new_y_arrays[current_trace_id].append(tup.y)
+            else:
+                new_y_arrays[current_trace_id].append(None)
 
-    right_y = []
-    for x in new_x:
-        if x in first_x:
-            left_y.append(first_y[first_x.index(x)])
-            right_y.append(None)
-        else:
-            left_y.append(None)
-            right_y.append(second_y[second_x.index(x)])
+    for trace_id, trace in enumerate(fig.data):
+        trace.x = new_x_array
+        trace.y = new_y_arrays[trace_id]
 
-    _fig.data[0].x = new_x
-    _fig.data[0].y = left_y
-    _fig.data[1].x = new_x
-    _fig.data[1].y = right_y
-    return _fig
+    return fig
 
 
 setattr(go.Figure, "yoy", yoy)
 setattr(go.Figure, "single_line", single_line)
-setattr(go.Figure, "continuous_color", continuous_color)
 setattr(go.Figure, "fix_facet_labels", fix_facet_labels)
 setattr(go.Figure, "dual", dual)
+setattr(go.Figure, "continuous_color", continuous_color)
