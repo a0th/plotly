@@ -5,7 +5,7 @@ Python](https://plotly.com/python/) library. It patches the Plotly
 Figure object, adding new methods to handle somewhat frequent use cases
 that would normally take some boilerplate code to solve.
 
-Simply `import plasma`, and you are good to go!
+Simply `pip install plotly-plasma`, `import plasma`, and you are good to go!
 
 -   [Multiple y-axes](#Multiple-y-axes)
 -   [Year over year comparison](#Year-over-year-comparison)
